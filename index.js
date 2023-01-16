@@ -7,6 +7,9 @@ const path = require('path');
 const {init: initDB, Counter} = require('./db');
 const {createProxyMiddleware} = require('http-proxy-middleware');
 const k2c = require('koa2-connect');
+const {PhotoCrawler} = require('./crawler/photo');
+const {Resolve} = require('./lib/helper');
+const res = new Resolve();
 
 const router = new Router();
 
@@ -19,6 +22,7 @@ router.get('/home', async ctx => {
 
 // 更新计数
 router.post('/api/count', async ctx => {
+    console.log('🚀 > ctx', ctx.request.body);
     const {request} = ctx;
     const {action} = request.body;
     if (action === 'inc') {
@@ -49,6 +53,20 @@ router.get('/api/count', async ctx => {
 router.get('/api/wx_openid', async ctx => {
     if (ctx.request.headers['x-wx-source']) {
         ctx.body = ctx.request.headers['x-wx-openid'];
+    }
+});
+
+// 查询图集
+router.post('/api/photo/search', async ctx => {
+    console.log('🚀 > ctx', ctx.request.body);
+    const {kw, page = 1} = ctx.request.body;
+    const [err, data, hasMore] = await PhotoCrawler.getPhoto({kw, page});
+    if (!err) {
+        // 返回结果
+        ctx.response.status = 200;
+        ctx.body = res.json(data, void 0, void 0, void 0, hasMore);
+    } else {
+        ctx.body = res.fail(err);
     }
 });
 
